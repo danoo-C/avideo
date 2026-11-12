@@ -1,0 +1,63 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "avideo"
+dynamic = ["version"]
+description = "Video analysis toolkit: per-pixel change heatmaps, motion, scenes and more, as a CLI and a local web app"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=2.0",
+    "opencv-python-headless>=4.10",
+    "pydantic>=2.7",
+    "tomli-w>=1.0",
+    "pillow>=10.4",
+    "scikit-image>=0.24",
+    "matplotlib>=3.9",
+    "typer>=0.12",
+    "rich>=13.7",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+]
+
+[project.optional-dependencies]
+# Frame-accurate seeking, VFR timestamps, H.264 output (spec.md §3.2)
+av = ["av>=12"]
+dev = [
+    "pytest>=8",
+    "httpx>=0.27",
+    "ruff>=0.6",
+    "mypy>=1.11",
+]
+
+[project.scripts]
+avideo = "avideo.cli.app:main"
+
+[tool.hatch.version]
+path = "src/avideo/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/avideo"]
+# The built React app is gitignored but must ship inside the package.
+artifacts = ["src/avideo/server/static/**"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--import-mode=importlib"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+extend-exclude = [".claude"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.11"
+packages = ["avideo"]
+mypy_path = "src"
+ignore_missing_imports = true

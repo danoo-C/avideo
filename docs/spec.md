@@ -56,8 +56,11 @@ This specification describes the complete feature set. It does not say what is b
 
 ### 3.1 Package layout
 
+The tree shows the target structure. Modules are created as they are implemented.
+
 ```
-avideo/
+pyproject.toml          # package, dependencies, `avideo` entry point
+src/avideo/
   core/                 # no UI code at all
     source.py           # VideoSource: backends, metadata, seeking, sampled frame iterator
     settings.py         # pydantic models for every parameter; TOML/JSON load, save, merge
@@ -82,8 +85,9 @@ avideo/
     parallel.py         # chunked multi-process execution and merging
     cache.py            # result cache
     errors.py           # error and warning types and codes
-  cli/                  # see spec-cli.md
-  web/                  # see spec-web.md
+  cli/                  # Typer + Rich; see spec-cli.md
+  server/               # FastAPI; serves the built frontend from server/static/; see spec-web.md
+frontend/               # React + TypeScript + Vite (Node project); see spec-web.md §3.2
 tests/
 docs/
 ```
@@ -104,7 +108,12 @@ docs/
 | `fastapi`, `uvicorn` | Web server (installed by default so `avideo serve` always works) |
 | `av` (PyAV) — optional extra `avideo[av]` | Frame-accurate seeking, VFR timestamps, H.264 output |
 
-Packaging uses `uv` and `pyproject.toml`. The package installs one console entry point: `avideo`.
+Development tools (extra `dev`): `pytest`, `httpx`, `ruff`, `mypy`.
+
+**Packaging:**
+- `pyproject.toml` with the `hatchling` build backend. The package installs one console entry point: `avideo`.
+- Development uses a virtual environment in `.venv/`, created with `python -m venv .venv` and filled with `pip install -e ".[dev,av]"`.
+- The frontend is a separate Node project (`frontend/`, Node ≥ 20) built with Vite. Its build output ships inside the Python package, so users never need Node ([spec-web.md](spec-web.md) §3.2).
 
 ### 3.3 Core concepts and data flow
 

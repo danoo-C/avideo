@@ -1,0 +1,30 @@
+html,
+body {
+  margin: 0;
+  background: #0e0f12;
+  color: #e8eaee;
+  font-family: system-ui, sans-serif;
+}
+
+.placeholder {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.placeholder h1 {
+  margin: 0;
+}
+
+.placeholder p {
+  margin: 0;
+  color: #a0a7b4;
+  font-family: ui-monospace, monospace;
+}
+
+.placeholder .error {
+  color: #f26d6d;
+}

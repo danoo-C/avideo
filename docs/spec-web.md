@@ -52,7 +52,7 @@ The terminal side (banner, request log, key hints) is specified in [spec-cli.md]
 
 ### 3.1 Server
 
-- **FastAPI** app served by **uvicorn**, single process. Analysis runs in a **process pool** through the core runner (spec.md §3.3), so the server stays responsive.
+- **FastAPI** app (`src/avideo/server/`) served by **uvicorn**, single process. Analysis runs in a **process pool** through the core runner (spec.md §3.3), so the server stays responsive.
 - **Workspace:** one opened video plus, per tool, its settings, latest preview result and latest full result. Workspaces live in memory. Several browser tabs may share one workspace; changes are broadcast to all of them.
 - **Jobs** per workspace: at most one **preview run** (the visible tool) and one **full run** at a time. A second full run request is queued. Full runs keep going when the user switches tools; progress shows next to the tool in the sidebar.
 - **Persistence** (data folder: Linux `~/.local/share/avideo`, macOS `~/Library/Application Support/avideo`, Windows `%APPDATA%\avideo`):
@@ -69,23 +69,33 @@ UI-only state (collapsed sections, last tool, panel widths) is kept in the brows
 
 ### 3.2 Frontend
 
-- Static files bundled in the package (`avideo/web/static/`). **No build step, no framework, no CDN.** Plain ES modules plus vendored fonts (Inter, JetBrains Mono as `woff2`).
-- Module layout:
+- **Stack:** **React + TypeScript**, built with **Vite**, in the top-level `frontend/` folder (a Node project, Node ≥ 20).
+- **Build:**
+  - `npm run build` type-checks (`tsc -b`) and writes the production bundle into `src/avideo/server/static/`.
+  - That folder is gitignored and ships inside the Python package, so users install and run avideo without Node.
+  - No CDN: every dependency is bundled, including the fonts (Inter and JetBrains Mono via `@fontsource`).
+- **Development:** `npm run dev` serves the UI with hot reload on `http://localhost:5173` and forwards `/api` (including the WebSocket) to `avideo serve` on port 8765.
+- **Source layout:**
   ```
-  index.html
-  app.js              # bootstrap, routing (open / workspace), global shortcuts
-  store.js            # state, undo/redo history, subscriptions
-  api.js              # REST + WebSocket client, binary framing, reconnect
-  schema.js           # parameter schema from /api/schema → labels, ranges, help
-  viewer/             # WebGL2 viewer: layers, colormap LUTs, blend/wipe, zoom/pan, overlays, ROI drawing
-  components/         # segmented, slider-row, select, number, time-field, swatches, tile, panel, dialog, toast, tooltip, palette
-  tools/<tool>.js     # one per tool: settings panel layout, stages, tool-specific views and charts
-  charts/             # small canvas chart helpers (area, line, bars, polar)
-  styles/tokens.css   # design tokens (section 4)
-  styles/app.css
+  frontend/src/
+    main.tsx            # entry
+    App.tsx             # routing (open / workspace), global shortcuts
+    api/                # typed REST + WebSocket client, binary framing, reconnect
+    store/              # state, undo/redo history, subscriptions
+    schema/             # parameter schema from /api/schema → labels, ranges, help
+    viewer/             # WebGL2 viewer: layers, colormap LUTs, blend/wipe, zoom/pan, overlays, ROI drawing
+    components/         # segmented, slider row, select, number, time field, swatches, tile, panel, dialog, toast, tooltip, palette
+    tools/<tool>/       # one folder per tool: settings panel, stages, tool-specific views and charts
+    charts/             # small canvas chart helpers (area, line, bars, polar)
+    styles/             # tokens.css (design tokens, section 4), app.css
   ```
-- **Generated settings panels.** Each `tools/<tool>.js` declares its panel: sections, rows, control types, which key each control edits and when it is visible. Labels, ranges, defaults and help texts come from `/api/schema`, which the server builds from the core pydantic models. Wording therefore matches the CLI help exactly.
-- **Viewer:** WebGL2. Colormapping, normalization, blend and wipe happen in a fragment shader, so display changes cost one frame. Canvas 2D is the fallback when WebGL2 is unavailable (slower, same features).
+- **State:** a small store module read through React's `useSyncExternalStore`; no state-management library is required.
+- **Types:** TypeScript types for REST and WebSocket messages mirror the server's pydantic models. They are generated from the server's OpenAPI schema where possible, so the two sides cannot drift apart unnoticed.
+- **Generated settings panels.** Each `tools/<tool>/` folder declares its panel: sections, rows, control types, which key each control edits and when it is visible. Labels, ranges, defaults and help texts come from `/api/schema`, which the server builds from the core pydantic models. Wording therefore matches the CLI help exactly.
+- **Viewer:**
+  - WebGL2. Colormapping, normalization, blend and wipe happen in a fragment shader, so display changes cost one frame.
+  - The canvas is driven imperatively through a ref, outside React's render cycle, so live frames never cause React re-renders.
+  - Canvas 2D is the fallback when WebGL2 is unavailable (slower, same features).
 
 ---
 
@@ -751,7 +761,7 @@ Fields mirror the core live events (spec.md §11). Every message carries an incr
 | Pipeline change while paused → stage image updated | ≤ 150 ms at preview size |
 | Pipeline change while running → first update of the restarted preview | ≤ 500 ms |
 | Pan, zoom, blend, wipe | 60 fps |
-| JavaScript shipped | ≤ 300 KB uncompressed, excluding fonts |
+| JavaScript shipped | ≤ 500 KB uncompressed (≈ 160 KB gzipped), excluding fonts |
 | Browser memory | ≤ 500 MB |
 
 ---
@@ -810,7 +820,7 @@ Fields mirror the core live events (spec.md §11). Every message carries an incr
 
 - **API:** every endpoint with FastAPI's test client. This includes token, Host and Origin enforcement, path traversal attempts (`..`, symlinks, absolute paths outside the root), validation errors, undo/redo and preset handling.
 - **WebSocket:** subscribe/stream, inspect latest-wins cancellation, run lifecycle (start, progress, finish, cancel, fail), reconnect with `resume_seq`, multi-tab `settings.changed`.
-- **Frontend unit tests:** store and undo history; schema-driven panel generation (every key of every tool has a control or is listed as export-only); normalization and colormap math checked against shared test vectors also used by the Python tests.
+- **Frontend unit tests** (Vitest, React Testing Library): store and undo history; schema-driven panel generation (every key of every tool has a control or is listed as export-only); normalization and colormap math checked against shared test vectors also used by the Python tests.
 - **End-to-end (Playwright):**
   1. open a synthetic video
   2. move a threshold slider while paused and see the Thresholded stage change
