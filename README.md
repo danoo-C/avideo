@@ -5,6 +5,7 @@ Video analysis toolkit: per-pixel change heatmaps (with optional grayscale or pe
 It comes as a **command-line tool** and a **local web app** that share one Python core, so the same settings give the same results in both.
 
 - Specification: [docs/spec.md](docs/spec.md) (core), [docs/spec-cli.md](docs/spec-cli.md) (CLI), [docs/spec-web.md](docs/spec-web.md) (web app)
+- Build plans: [docs/plans/](docs/plans/README.md) (milestone roadmap and the current milestone's plan)
 
 ## Project layout
 
@@ -15,7 +16,7 @@ src/avideo/
   server/     local web server (FastAPI); serves the built frontend from server/static/
 frontend/     web app UI (React + TypeScript + Vite)
 tests/        Python tests
-docs/         specification
+docs/         specification and build plans
 ```
 
 ## Development setup
